@@ -145,11 +145,11 @@ def transform_multioptional_column(col, data):
     def column_name(value):
         return col + '_' + re.sub('\W', '', re.sub('\(.*?\)', '', value.strip())).lower()
 
-    splitted = data[col].str.split(';').values
+    splitted = [x if type(pd.notnull(x)) != bool else [] for x in data[col].str.split(';').values]
+    splitted = [[y.strip() for y in x] for x in splitted]
     values = {s for s in np.hstack(splitted)}
     data_copy = data
     for value in values:
         data_copy = data_copy.assign(**{
-            column_name(value): [value in x if type(pd.notnull(x)) != bool else None for x in
-                                 splitted]})
+            column_name(value): [value in x if len(x) > 0 else None for x in splitted]})
     return data_copy.drop(col, axis=1)
