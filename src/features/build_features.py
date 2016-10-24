@@ -139,19 +139,23 @@ def transform_is_important_column(col, data):
                                                           'This is very important'])
 
 
+def format_for_column_name(str):
+    return re.sub('\W', '', re.sub('\(.*?\)', '', str.strip())).lower()
+
+
 def transform_partially_ordinal_column(col, data, categories):
     ordered = data[col].astype('category', categories=categories, ordered=True)
-    new_columns = {left: col + '_' + re.sub('\W', '', left.lower()) for left in
+    new_columns = {left: col + '_' + format_for_column_name(left) for left in
                    set(data[col].dropna().unique()) - set(categories)}
     data_copy = data
     for val, new_col in new_columns.items():
-        data_copy = data_copy.assign(**{new_col: data[col] == val})
+        data_copy = data_copy.assign(**{new_col: data[col].apply(lambda x: 1 if x == val else 0)})
     return data_copy.assign(**{col: ordered})
 
 
 def transform_multioptional_column(col, data):
     def column_name(value):
-        return col + '_' + re.sub('\W', '', re.sub('\(.*?\)', '', value.strip())).lower()
+        return col + '_' + format_for_column_name(value)
 
     splitted = [x if type(pd.notnull(x)) != bool else [] for x in data[col].str.split(';').values]
     splitted = [[y.strip() for y in x] for x in splitted]
@@ -161,3 +165,12 @@ def transform_multioptional_column(col, data):
         data_copy = data_copy.assign(**{
             column_name(value): [1 if value in x else 0 for x in splitted]})
     return data_copy.drop(col, axis=1)
+
+
+def to_dummy(data, exclude):
+    columns = set(data.columns[data.dtypes == 'category']) - set(exclude)
+    data_copy = data
+    for column in columns:
+        data_copy = data_copy.drop(column, axis=1) \
+            .combine_first(pd.get_dummies(data[column], prefix=column).rename(columns=format_for_column_name))
+    return data_copy
