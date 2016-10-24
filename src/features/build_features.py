@@ -85,6 +85,12 @@ def transform_raw_dataset(data):
               col='visit_frequency',
               categories=['I have never been on Stack Overflow. I just love taking surveys.',
                           'Very rarely', 'Once a week', 'Once a day', 'Multiple times a day']) \
+        .pipe((transform_partially_ordinal_column, 'data'),
+              col='programming_ability',
+              categories=[1., 2., 3., 4., 5., 6., 7., 8., 9., 10.]) \
+        .pipe((transform_partially_ordinal_column, 'data'),
+              col='women_on_team',
+              categories=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11+']) \
         .pipe((transform_is_important_column, 'data'), col='important_variety') \
         .pipe((transform_is_important_column, 'data'), col='important_control') \
         .pipe((transform_is_important_column, 'data'), col='important_sameend') \
@@ -115,6 +121,8 @@ def transform_raw_dataset(data):
         .pipe((transform_multioptional_column, 'data'), col='how_to_improve_interview_process') \
         .pipe((transform_multioptional_column, 'data'), col='developer_challenges') \
         .pipe((transform_multioptional_column, 'data'), col='why_stack_overflow')
+
+    data = data.drop(['age_midpoint', 'experience_midpoint', 'salary_midpoint', 'big_mac_index'], axis=1)
     return data
 
 
@@ -151,5 +159,5 @@ def transform_multioptional_column(col, data):
     data_copy = data
     for value in values:
         data_copy = data_copy.assign(**{
-            column_name(value): [value in x if len(x) > 0 else None for x in splitted]})
+            column_name(value): [1 if value in x else 0 for x in splitted]})
     return data_copy.drop(col, axis=1)
